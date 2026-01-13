@@ -4,92 +4,84 @@ import sys
 from itertools import chain
 
 def get_pairs(filelist):
-    pairs=list()
+    pairs = list()
     
     for f in filelist:
-        tmp_n=re.split("_R?[1|2][.|_]", f)[0]
-        #r_tmp=re.compile(f"^{tmp_n}_R?[1|2][.|_]")
-        r_tmp=re.compile("^{}_R?[1|2][.|_]".format(tmp_n))
-        pair_tmp=sorted(list(filter(r_tmp.search, rawr)))
-        if pair_tmp not in pairs and len(pair_tmp)==2:
+        tmp_n = re.split("_R?[1|2][.|_]", f)[0]
+        r_tmp = re.compile("^{}_R?[1|2][.|_]".format(tmp_n))
+        pair_tmp = sorted(list(filter(r_tmp.search, rawr)))
+        if pair_tmp not in pairs and len(pair_tmp) == 2:
             pairs.append(pair_tmp)
     return pairs
     
 
+# read the arguments
+outd = os.path.abspath(config['outd'])  # changed from realpath
 
-# # read the arguments
-outd=os.path.realpath(config['outd'])
-
-#create file structure
+# create file structure
 if not os.path.isdir(outd):
     os.makedirs(outd)
 
-# check which imput
+# check which input
 if 'ind' in config.keys():
-    ind=os.path.realpath(config['ind'])
+    ind = os.path.abspath(config['ind'])  # changed from realpath
     # find all the files in the directory
-    infiles=os.listdir(ind)
-    print("Input directory:\n"+ind)
+    infiles = os.listdir(ind)
+    print("Input directory:\n" + ind)
 
 if 'inp' in config.keys():
-    inp=os.path.realpath(config['inp'])
-    infiles=[os.path.basename(inp)]
-    print("Input:\n"+inp)
+    inp = os.path.abspath(config['inp'])  # changed from realpath
+    infiles = [os.path.basename(config['inp'])]  # keep given name
+    print("Input:\n" + inp)
     # We need an ind, cause it is called in the 
     # individual rule files
-    ind=os.path.dirname(inp)
+    ind = os.path.dirname(inp)
 
 # need to fix ipe input
 # how to handle the two files? need to split it up
 if 'ipe' in config.keys():
-    ipe=[os.path.realpath(f) for f in config['ipe'].split()]
-    infiles=[os.path.basename(f) for f in ipe]
-    print("Inputs:\n"+" ".join(ipe))
+    ipe = [os.path.abspath(f) for f in config['ipe'].split()]  # changed from realpath
+    infiles = [os.path.basename(f) for f in config['ipe'].split()]  # keep given name
+    print("Inputs:\n" + " ".join(ipe))
     # We need an ind, cause it is called in the 
     # individual rule files
-    ind=os.path.dirname(ipe[0])
+    ind = os.path.dirname(ipe[0])
 
-print("Output directory:\n"+outd)
-    
-    
+print("Output directory:\n" + outd)
 
 # check input directory for files
 
-job_ids=[]
+job_ids = []
 
 # find all assbly with ending .fna, .fasta, .fa
 # find all raw reads with ending .fastq.gz, .fastq., .fq, .fq.gz
-assbly=[f for f in infiles if (f.endswith(".fna") or f.endswith(".fasta") or f.endswith(".fa"))]
-longr=[f for f in infiles if (f.endswith("_SE.fastq.gz") or f.endswith("_SE.fastq") or f.endswith("_SE.fq") or f.endswith("_SE.fq.gz"))]
-rawr=[f for f in infiles if (f.endswith(".fastq.gz") or f.endswith(".fastq") or f.endswith(".fq") or f.endswith(".fq.gz"))]
+assbly = [f for f in infiles if (f.endswith(".fna") or f.endswith(".fasta") or f.endswith(".fa"))]
+longr = [f for f in infiles if (f.endswith("_SE.fastq.gz") or f.endswith("_SE.fastq") or f.endswith("_SE.fq") or f.endswith("_SE.fq.gz"))]
+rawr = [f for f in infiles if (f.endswith(".fastq.gz") or f.endswith(".fastq") or f.endswith(".fq") or f.endswith(".fq.gz"))]
 
 # find the matching raw files that have either a _1 _2 or _R1 _R2
-r=re.compile("_R?[1|2][.|_]")
-raw_pairs=get_pairs(list(filter(r.search, rawr)))
+r = re.compile("_R?[1|2][.|_]")
+raw_pairs = get_pairs(list(filter(r.search, rawr)))
 
-#if ind != False:
 if 'ind' in config.keys():
-    raw_singles=list(set(rawr)-set(chain.from_iterable(raw_pairs)))
+    raw_singles = list(set(rawr) - set(chain.from_iterable(raw_pairs)))
 elif 'inp' in config.keys():
-    raw_singles=longr
+    raw_singles = longr
 else:
-    raw_singles=[]
+    raw_singles = []
 
 # get the ids of the different files (i.e. cut off the extensions)
-assbly_ids=sorted([f.rsplit('.', 1)[0] for f in assbly])
-# regex split to account for different fine names (e.g., _R1.fastq.gz, _1.fastq.gz)
-raw_pairs_ids=sorted([re.split("_R?[1|2][.|_]",f[0])[0] for f in raw_pairs])
-raw_singles_ids=sorted([f.rsplit('_SE', 1)[0] for f in raw_singles])
-
+assbly_ids = sorted([f.rsplit('.', 1)[0] for f in assbly])
+# regex split to account for different file names (e.g., _R1.fastq.gz, _1.fastq.gz)
+raw_pairs_ids = sorted([re.split("_R?[1|2][.|_]", f[0])[0] for f in raw_pairs])
+raw_singles_ids = sorted([f.rsplit('_SE', 1)[0] for f in raw_singles])
 
 include: "rules/virulencepred_align.smk"
 include: "rules/disinfpred_align.smk"
 include: "rules/predict.smk"
 
-
 rule all:
     input:
-        outd+"/prediction/combined_predictions_out_numerical.csv",
-        outd+"/prediction/combined_predictions_out_categorical.csv"
-
+        outd + "/prediction/combined_predictions_out_numerical.csv",
+        outd + "/prediction/combined_predictions_out_categorical.csv"
 
